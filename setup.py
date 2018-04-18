@@ -13,7 +13,7 @@ with open('nilearn_cli/__init__.py', 'r') as f:
 with open('README.rst', 'r', encoding='utf-8') as f:
     readme = f.read()
 
-REQUIRES = ['nilearn']
+REQUIRES = ['nilearn', 'numpy', 'scipy', 'scikit-learn']
 
 setup(
     name='nilearn-cli',
@@ -28,7 +28,7 @@ setup(
     license='MIT/Apache-2.0',
 
     keywords=[
-        '',
+        'nilearn',
     ],
 
     classifiers=[
@@ -43,7 +43,11 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
     ],
-
+    entry_points={
+        'console_scripts': [
+            'connectome = nilearn_cli.connectome:run_connectome',
+        ]
+    },
     install_requires=REQUIRES,
     tests_require=['coverage', 'pytest'],
 

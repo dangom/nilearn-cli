@@ -3,6 +3,7 @@ nilearn-cli
 
 -----
 Convenient command line tools for `Nilearn <http://nilearn.github.io/>`_.
+Currently only provides a single tool: connectome, which generates connectivity matrices from an input dataset.
 
 
 .. contents:: **Table of Contents**
