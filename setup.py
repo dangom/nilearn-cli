@@ -46,6 +46,7 @@ setup(
     entry_points={
         'console_scripts': [
             'connectome = nilearn_cli.connectome:run_connectome',
+            'extract-region = nilearn_cli.region_extraction:run_region_extraction',
         ]
     },
     install_requires=REQUIRES,
