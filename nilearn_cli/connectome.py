@@ -192,13 +192,15 @@ def main(args):
     """Main connectome routine.
     """
     # -- Check inputs --
-    assert op.exists(args.infile)
+    assert op.exists(args.infile), 'Input file not found.'
 
     if args.confounds is not None:
-        assert op.exists(args.confounds)
+        assert op.exists(args.confounds), 'Confounds file not found.'
 
     if args.outfile is None:
         outfile = _rename_outfile(args.infile, args.atlas, args.kind)
+    else:
+        outfile = args.outfile
 
     # TODO implement proper sanity check:
     if op.exists(outfile):

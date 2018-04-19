@@ -26,9 +26,9 @@ def _cli_parser():
         if not 0 <= x <= 100:
             raise argparse.ArgumentTypeError("Only values between 0 and 100 are accepted.")
         else:
-            return x
+            return str(x) + '%'
 
-    parser.add_argument('--threshold', type=threshold_type,
+    parser.add_argument('--threshold', type=threshold_type, default='97%',
                         help='Threshold percentile: 0 < x < 100. Ex. 98')
 
     parser.add_argument('--outfile', type=str, default=None,
@@ -39,7 +39,7 @@ def _cli_parser():
 
 
 def main():
-    pass
+    raise NotImplementedError('Not implemented.')
 
 
 def run_region_extraction():
