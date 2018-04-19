@@ -42,7 +42,7 @@ ATLAS_COORDS = dict(
 
 ATLAS_PROBABILISTIC = dict(
     msdl=(lambda:
-          datasets.fetch_atlas_msdl()))
+          _fetch_msdl()))
 
 
 def _fetch_aal():
@@ -52,6 +52,15 @@ def _fetch_aal():
     aal = datasets.fetch_atlas_aal()
     aal['labels'] = ['Background'] + aal['labels']
     return aal
+
+
+def _fetch_msdl():
+    """ The AAL atlas does not contain a background label.
+    To make the API consistent we fix it here.
+    """
+    msdl = datasets.fetch_atlas_msdl()
+    msdl['labels'] = ['Background'] + msdl['labels']
+    return msdl
 
 
 def _rename_outfile(nifti, atlas, kind='correlation'):
