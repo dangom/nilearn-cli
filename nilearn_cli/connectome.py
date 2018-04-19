@@ -11,7 +11,8 @@ import numpy as np
 from nilearn import plotting
 from nilearn.connectome import ConnectivityMeasure
 import nilearn.datasets as datasets
-from nilearn.input_data import NiftiLabelsMasker, NiftiSpheresMasker
+from nilearn.input_data import (NiftiLabelsMasker, NiftiSpheresMasker,
+                                NiftiMapsMasker)
 
 
 # Voxels with 0 intensity correspond to the background.
@@ -20,7 +21,7 @@ YEO_LABELS = ['Background', 'Visual', 'Somato-sensor',
               'Limbic', 'Frontoparietal', 'Default']
 
 
-ATLAS = dict(
+ATLAS_3D = dict(
     cortical=(lambda:
               datasets.fetch_atlas_harvard_oxford('cort-maxprob-thr25-2mm')),
     subcortical=(lambda:
@@ -30,11 +31,18 @@ ATLAS = dict(
                labels=YEO_LABELS)),
     aal=(lambda:
          _fetch_aal()),
-    msdl=(lambda:
-          datasets.fetch_atlas_msdl()),
-    brodmann=(lambda:
-              datasets.fetch_atlas_talairach('ba'))
+    # brodmann=(lambda:
+    #           datasets.fetch_atlas_talairach('ba'))
 )
+
+ATLAS_COORDS = dict(
+    power=(lambda:
+           datasets.fetch_coords_power_2011()),
+)
+
+ATLAS_PROBABILISTIC = dict(
+    msdl=(lambda:
+          datasets.fetch_atlas_msdl()))
 
 
 def _fetch_aal():
@@ -67,8 +75,32 @@ def fetch_atlas(name):
     filename, label logic can go in here so that the function always
     returns a tuple (atlas_filename, atlas_labels)
     """
-    dataset = ATLAS[name]()
+    dataset = ATLAS_3D[name]()
     return dataset['maps'], dataset['labels']
+
+
+def fetch_coords(name):
+    """
+    This function isn't doing much right now. In the case
+    I ever expand the atlas possibilities, than a proper
+    filename, label logic can go in here so that the function always
+    returns a tuple (atlas_filename, atlas_labels)
+    """
+    dataset = ATLAS_COORDS[name]()
+    labels = dataset['labels'] if 'labels' in dataset.keys() else None
+    return dataset['rois'], labels
+
+
+def fetch_probabilistic(name):
+    """
+    This function isn't doing much right now. In the case
+    I ever expand the atlas possibilities, than a proper
+    filename, label logic can go in here so that the function always
+    returns a tuple (atlas_filename, atlas_labels)
+    """
+    dataset = ATLAS_PROBABILISTIC[name]()
+    labels = dataset['labels'] if 'labels' in dataset.keys() else None
+    return dataset['maps'], labels
 
 
 def extract_timeseries(filename, atlas_filename, confounds=None):
@@ -83,19 +115,32 @@ def extract_timeseries(filename, atlas_filename, confounds=None):
     return time_series
 
 
-def extract_timeseries_power(filename, confounds=None):
+def extract_timeseries_coords(filename, raw_coords, confounds=None):
     """Because the power parcellation is given in coordinates and not labels,
     we dedicate an exclusive function to deal with it.
     """
-    power = datasets.fetch_coords_power_2011()
-    coords = np.vstack((power.rois['x'], power.rois['y'], power.rois['z'])).T
+    coords = np.vstack((raw_coords.rois['x'],
+                        raw_coords.rois['y'],
+                        raw_coords.rois['z'])).T
 
     spheres_masker = NiftiSpheresMasker(
         seeds=coords, radius=5., standardize=True)
 
-    timeseries = spheres_masker.fit_transform(filename,
-                                              confounds=confounds)
-    return timeseries
+    time_series = spheres_masker.fit_transform(filename,
+                                               confounds=confounds)
+    return time_series
+
+
+def extract_timeseries_probabilistic(filename, maps, confounds=None):
+    """Because the power parcellation is given in coordinates and not labels,
+    we dedicate an exclusive function to deal with it.
+    """
+    maps_masker = NiftiMapsMasker(
+        maps, resampling_target="data", standardize=True)
+
+    time_series = maps_masker.fit_transform(filename,
+                                            confounds=confounds)
+    return time_series
 
 
 def generate_connectivity_matrix(time_series, kind='correlation'):
@@ -151,9 +196,13 @@ def main(args):
         raise NameError('Outfile already exists. Not going to overwrite.')
 
     # -- Compute and save the connectome --
-    if args.atlas == 'power':
-        atlas_labels = None
-        ts = extract_timeseries_power(args.infile, args.confounds)
+    if args.atlas in ATLAS_COORDS.keys():
+        atlas_rois, atlas_labels = fetch_coords(args.atlas)
+        ts = extract_timeseries_coords(args.infile, atlas_rois, args.confounds)
+    elif args.atlas in ATLAS_PROBABILISTIC.keys():
+        maps, atlas_labels = fetch_probabilistic(args.atlas)
+        ts = extract_timeseries_probabilistic(args.infile, maps,
+                                              args.confounds)
     else:
         atlas_filename, atlas_labels = fetch_atlas(args.atlas)
         ts = extract_timeseries(args.infile, atlas_filename, args.confounds)
@@ -170,9 +219,13 @@ def _cli_parser():
     parser.add_argument('infile', type=str,
                         help='Path to 4D dataset')
 
-    parser.add_argument('--atlas', type=str, default='aal',
-                        choices=['power', *(list(ATLAS.keys()))],
-                        help='Which atlas to use? Default aal')
+    atlas_choices = [*ATLAS_PROBABILISTIC.keys(),
+                     *ATLAS_3D.keys(),
+                     *ATLAS_COORDS.keys()]
+
+    parser.add_argument('--atlas', type=str, default='cortical',
+                        choices=atlas_choices,
+                        help=('Which atlas to use? Default cortical'))
 
     parser.add_argument('--confounds', default=None,
                         help='Path to tsv or csv file of confounds.')
