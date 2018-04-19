@@ -19,6 +19,7 @@ YEO_LABELS = ['Background', 'Visual', 'Somato-sensor',
               'Dorsal Attention', 'Ventral Attention',
               'Limbic', 'Frontoparietal', 'Default']
 
+
 ATLAS = dict(
     cortical=(lambda:
               datasets.fetch_atlas_harvard_oxford('cort-maxprob-thr25-2mm')),
@@ -26,12 +27,28 @@ ATLAS = dict(
                  datasets.fetch_atlas_harvard_oxford('sub-maxprob-thr25-2mm')),
     yeo7=(lambda:
           dict(maps=datasets.fetch_atlas_yeo_2011()['thick_7'],
-               labels=YEO_LABELS))
+               labels=YEO_LABELS)),
+    aal=(lambda:
+         _fetch_aal()),
+    msdl=(lambda:
+          datasets.fetch_atlas_msdl()),
+    brodmann=(lambda:
+              datasets.fetch_atlas_talairach('ba'))
 )
+
+
+def _fetch_aal():
+    """ The AAL atlas does not contain a background label.
+    To make the API consistent we fix it here.
+    """
+    aal = datasets.fetch_atlas_aal()
+    aal['labels'] = ['Background'] + aal['labels']
+    return aal
 
 
 def _rename_outfile(nifti, atlas, kind='correlation'):
     """Hackish change of extension from nifti to png.
+    Also add some info on the atlas use and the kind of map computed
     """
     if nifti.endswith('nii.gz'):
         name_sans_extension = nifti[:-7]
@@ -84,6 +101,7 @@ def extract_timeseries_power(filename, confounds=None):
 def generate_connectivity_matrix(time_series, kind='correlation'):
     """
     Generate a connectivity matrix from a collection of time series.
+    param :kind: Any kind accepted by nilearn ConnectivityMeasure
     """
     connectivity_measure = ConnectivityMeasure(kind=kind)
     connectivity_matrix = connectivity_measure.fit_transform([time_series])[0]
@@ -119,19 +137,11 @@ def savefig_connectome(connectivity_matrix, outfile, labels=None,
 def main(args):
     """Main connectome routine.
     """
+    # -- Check inputs --
     assert op.exists(args.infile)
 
     if args.confounds is not None:
         assert op.exists(args.confounds)
-
-    if args.atlas == 'power':
-        atlas_labels = None
-        ts = extract_timeseries_power(args.infile, args.confounds)
-    else:
-        atlas_filename, atlas_labels = fetch_atlas(args.atlas)
-        ts = extract_timeseries(args.infile, atlas_filename, args.confounds)
-
-    connectivity_matrix = generate_connectivity_matrix(ts, args.kind)
 
     if args.outfile is None:
         outfile = _rename_outfile(args.infile, args.atlas, args.kind)
@@ -140,7 +150,16 @@ def main(args):
     if op.exists(outfile):
         raise NameError('Outfile already exists. Not going to overwrite.')
 
-    savefig_connectome(connectivity_matrix, outfile,
+    # -- Compute and save the connectome --
+    if args.atlas == 'power':
+        atlas_labels = None
+        ts = extract_timeseries_power(args.infile, args.confounds)
+    else:
+        atlas_filename, atlas_labels = fetch_atlas(args.atlas)
+        ts = extract_timeseries(args.infile, atlas_filename, args.confounds)
+
+    connectivity_matrix = generate_connectivity_matrix(ts, args.kind)
+    savefig_connectome(connectivity_matrix, outfile, title=args.title,
                        labels=atlas_labels, reorder=args.no_reorder)
 
 
@@ -151,12 +170,15 @@ def _cli_parser():
     parser.add_argument('infile', type=str,
                         help='Path to 4D dataset')
 
-    parser.add_argument('--atlas', type=str, default='power',
-                        choices=['power', 'yeo7', 'cortical', 'subcortical'],
-                        help='Which atlas to use? Default power')
+    parser.add_argument('--atlas', type=str, default='aal',
+                        choices=['power', *(list(ATLAS.keys()))],
+                        help='Which atlas to use? Default aal')
 
     parser.add_argument('--confounds', default=None,
                         help='Path to tsv or csv file of confounds.')
+
+    parser.add_argument('--title', default=None,
+                        help='Add a title to the figure')
 
     parser.add_argument('--kind', default='correlation',
                         choices=['correlation',
