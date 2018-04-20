@@ -25,9 +25,11 @@ def extract_region(threshold_percentile_img, min_region_size):
 
 def savefig_regions(regions_percentile_img, inputfile, outputfile):
     fig = plt.figure()
+    title = ("ROIs using percentile thresholding. "
+         "\n Each ROI in same color is an extracted region")
     plotting.plot_prob_atlas(regions_percentile_img, bg_img=inputfile,
                              view_type='contours', display_mode='z',
-                             cut_coords=10, title='regions', figure=fig)
+                             cut_coords=10, title=title, figure=fig)
     plt.savefig(outputfile + '_region_extraction.png')
 
 
@@ -63,7 +65,6 @@ def _cli_parser():
 def main(args):
     # -- Check inputs --
     assert op.exists(args.infile), 'Input file not found.'
-    assert op.exists(args.outfile), 'Output file not defined.'
 
     # -- Compute and save the regions --
     threshold_percentile_img = threshold_map(args.infile, args.threshold)
