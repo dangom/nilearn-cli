@@ -22,7 +22,6 @@ FSAVERAGE = datasets.fetch_surf_fsaverage()
 
 def _rename_outfile(nifti):
     """Hackish change of extension from nifti to png.
-    Also add some info on the atlas use and the kind of map computed
     """
     if nifti.endswith('nii.gz'):
         name_sans_extension = nifti[:-7]
@@ -35,6 +34,10 @@ def _rename_outfile(nifti):
 
 
 def plot_full_surf_stat_map(stat, outname, title=None, **kwargs):
+    """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
+    Plots both hemispheres and both medial and lateral views of the brain.
+    The surface mesh used for plotting is freesurfer's fsaverage.
+    """
     fig, axes = plt.subplots(dpi=100, nrows=2, ncols=2,
                              subplot_kw={'projection': '3d'})
     ((ax_ll, ax_rl), (ax_lm, ax_rm)) = axes
@@ -76,10 +79,14 @@ def plot_full_surf_stat_map(stat, outname, title=None, **kwargs):
     plt.savefig(outname, dpi=100, bbox_inches='tight')
 
 
-def _plot_wrapper(tup, outdir=None):
+def _plot_wrapper(tup, outdir=None, threshold=None):
+    """Small wrapper at the module level compatible with pool.map()
+    to call multiple instances of plot_full_surf_stat_map in parallel.
+    """
     idx, img = tup
     outname = op.join(outdir, f'{idx:02}.png')
-    plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
+    plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}',
+                            threshold=threshold)
 
 
 def main(args):
@@ -100,7 +107,8 @@ def main(args):
     pool = multiprocessing.Pool()
     images = image.iter_img(args.infile)
 
-    pool.map(partial(_plot_wrapper, outdir=outdir), enumerate(images))
+    pool.map(partial(_plot_wrapper, outdir=outdir, threshold=args.threshold),
+             enumerate(images))
 
     # Non parallel version:
     # for idx, img in enumerate(images):
@@ -119,6 +127,8 @@ def _cli_parser():
     parser.add_argument('--outfile', type=str, default=None,
                         help=('Name of output file. Default same name '
                               'as file but with png extension'))
+    parser.add_argument('--threshold', type=float, default=None,
+                        help=('Value to (lower) threshold maps'))
 
     return parser
 
