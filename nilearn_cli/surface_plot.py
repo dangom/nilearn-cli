@@ -2,7 +2,7 @@
 """
 Given a 3D or 4D *statistical* image, generate surface plots and output
 them as a png file. Uses ImageMagick as a dependency to generate a
-mosaic.
+mosaic in the case of 4D images.
 """
 
 import argparse
@@ -13,6 +13,7 @@ from functools import partial
 from subprocess import call
 
 import matplotlib.pyplot as plt
+import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from nilearn import datasets, image, plotting, surface
 from nilearn._utils.extmath import fast_abs_percentile
@@ -33,7 +34,8 @@ def _rename_outfile(nifti):
     return name_sans_extension + '.png'
 
 
-def plot_full_surf_stat_map(stat, outname, title=None, save=True, **kwargs):
+def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
+                            save=True, **kwargs):
     """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
     Plots both hemispheres and both medial and lateral views of the brain.
     The surface mesh used for plotting is freesurfer's fsaverage.
@@ -73,6 +75,13 @@ def plot_full_surf_stat_map(stat, outname, title=None, save=True, **kwargs):
         ax.dist = 6
     # Remove whitespace between subplots.
     fig.subplots_adjust(wspace=-0.02, hspace=0.0)
+
+    if ts is not None:
+        ax5 = fig.add_axes([0.34, 0.465, 0.38, 0.06])
+        ax5.plot(ts, 'r', linewidth=0.8)
+        ax5.axis('off')
+        ax5.patch.set_alpha(0.)
+
     if title is not None:
         fig.suptitle(title)
 
@@ -80,13 +89,15 @@ def plot_full_surf_stat_map(stat, outname, title=None, save=True, **kwargs):
         plt.savefig(outname, dpi=100, bbox_inches='tight')
 
 
-def _plot_wrapper(tup, outdir=None, threshold=None):
+def _plot_wrapper(tup, outdir=None, threshold=None, tsfile=None):
     """Small wrapper at the module level compatible with pool.map()
     to call multiple instances of plot_full_surf_stat_map in parallel.
     """
     idx, img = tup
     outname = op.join(outdir, f'{idx:02}.png')
-    plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}',
+    if tsfile is not None:
+        ts = np.loadtxt(tsfile)[:, idx]
+    plot_full_surf_stat_map(img, outname, ts=ts, title=f'Volume {idx:02}',
                             threshold=threshold)
 
 
@@ -102,7 +113,8 @@ def main(args):
     if op.exists(outfile):
         raise NameError('Outfile already exists. Not going to overwrite.')
 
-    outdir = op.join(op.dirname(args.infile), 'surface_plot')
+    originaldir = op.dirname(args.infile)
+    outdir = op.join(originaldir, 'surface_plot')
     os.makedirs(outdir, exist_ok=True)
 
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
@@ -112,8 +124,14 @@ def main(args):
     else:  # Handle 4D images.
         pool = multiprocessing.Pool()
         images = image.iter_img(args.infile)
+
+        if op.exists(op.join(originaldir, 'melodic_mix')):
+            tsfile = op.join(originaldir, 'melodic_mix')
+        else:
+            tsfile = None
+
         pool.map(partial(_plot_wrapper, outdir=outdir,
-                         threshold=args.threshold),
+                         threshold=args.threshold, tsfile=tsfile),
                  enumerate(images))
 
         # Non parallel version, for completion:
