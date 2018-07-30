@@ -46,20 +46,20 @@ def plot_full_surf_stat_map(stat, outname, title=None, **kwargs):
     # Vmax scaled for optimal dynamic range.
     vmax = fast_abs_percentile(stat.dataobj, 99.7)
 
-    plotting.plot_surf_stat_map(FSAVERAGE.infl_right, texture,
+    plotting.plot_surf_stat_map(FSAVERAGE.pial_right, texture,
                                 hemi='right', axes=ax_rl,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
-    plotting.plot_surf_stat_map(FSAVERAGE.infl_right, texture,
+    plotting.plot_surf_stat_map(FSAVERAGE.pial_right, texture,
                                 hemi='right', view='medial', axes=ax_rm,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
 
-    plotting.plot_surf_stat_map(FSAVERAGE.infl_left, texture_l,
+    plotting.plot_surf_stat_map(FSAVERAGE.pial_left, texture_l,
                                 hemi='left', axes=ax_ll,
                                 bg_map=FSAVERAGE.sulc_left,
                                 vmax=vmax, **kwargs)
-    plotting.plot_surf_stat_map(FSAVERAGE.infl_left, texture_l,
+    plotting.plot_surf_stat_map(FSAVERAGE.pial_left, texture_l,
                                 hemi='left', view='medial', axes=ax_lm,
                                 bg_map=FSAVERAGE.sulc_left,
                                 vmax=vmax, **kwargs)
