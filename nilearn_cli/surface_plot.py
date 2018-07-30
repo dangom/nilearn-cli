@@ -35,7 +35,7 @@ def _rename_outfile(nifti):
 
 
 def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
-                            save=True, **kwargs):
+                            inflate=False, save=True, **kwargs):
     """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
     Plots both hemispheres and both medial and lateral views of the brain.
     The surface mesh used for plotting is freesurfer's fsaverage.
@@ -51,20 +51,28 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
     # Vmax scaled for optimal dynamic range.
     vmax = fast_abs_percentile(stat.dataobj, 99.7)
 
-    plotting.plot_surf_stat_map(FSAVERAGE.pial_right, texture,
+    # Plot on inflated brain or on pial surface?
+    if inflate:
+        leftsurf = FSAVERAGE.infl_left
+        rightsurf = FSAVERAGE.infl_right
+    else:
+        leftsurf = FSAVERAGE.pial_left
+        rightsurf = FSAVERAGE.pial_right
+
+    plotting.plot_surf_stat_map(rightsurf, texture,
                                 hemi='right', axes=ax_rl,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
-    plotting.plot_surf_stat_map(FSAVERAGE.pial_right, texture,
+    plotting.plot_surf_stat_map(rightsurf, texture,
                                 hemi='right', view='medial', axes=ax_rm,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
 
-    plotting.plot_surf_stat_map(FSAVERAGE.pial_left, texture_l,
+    plotting.plot_surf_stat_map(leftsurf, texture_l,
                                 hemi='left', axes=ax_ll,
                                 bg_map=FSAVERAGE.sulc_left,
                                 vmax=vmax, **kwargs)
-    plotting.plot_surf_stat_map(FSAVERAGE.pial_left, texture_l,
+    plotting.plot_surf_stat_map(leftsurf, texture_l,
                                 hemi='left', view='medial', axes=ax_lm,
                                 bg_map=FSAVERAGE.sulc_left,
                                 vmax=vmax, **kwargs)
@@ -89,16 +97,17 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
         plt.savefig(outname, dpi=100, bbox_inches='tight')
 
 
-def _plot_wrapper(tup, outdir=None, threshold=None, tsfile=None):
+def _plot_wrapper(tup, outdir=None, threshold=None,
+                  tsfile=None, inflate=False):
     """Small wrapper at the module level compatible with pool.map()
     to call multiple instances of plot_full_surf_stat_map in parallel.
     """
     idx, img = tup
-    outname = op.join(outdir, f'{idx:02}.png')
+    outname = op.join(outdir, f'{idx:04}.png')
     if tsfile is not None:
         ts = np.loadtxt(tsfile)[:, idx]
     plot_full_surf_stat_map(img, outname, ts=ts, title=f'Volume {idx:02}',
-                            threshold=threshold)
+                            threshold=threshold, inflate=inflate)
 
 
 def main(args):
@@ -119,7 +128,8 @@ def main(args):
 
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
         img = image.load_img(args.infile)
-        plot_full_surf_stat_map(img, outfile, title=f'Volume 00')
+        plot_full_surf_stat_map(img, outfile, title=f'Volume 00',
+                                inflate=args.inflate)
 
     else:  # Handle 4D images.
         pool = multiprocessing.Pool()
@@ -131,12 +141,13 @@ def main(args):
             tsfile = None
 
         pool.map(partial(_plot_wrapper, outdir=outdir,
-                         threshold=args.threshold, tsfile=tsfile),
+                         threshold=args.threshold, tsfile=tsfile,
+                         inflate=args.inflate),
                  enumerate(images))
 
         # Non parallel version, for completion:
         # for idx, img in enumerate(images):
-        #     outname = op.join(outdir, f'{idx:02}.png')
+        #     outname = op.join(outdir, f'{idx:04}.png')
         #     plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
@@ -154,6 +165,9 @@ def _cli_parser():
                               'as file but with png extension'))
     parser.add_argument('--threshold', type=float, default=None,
                         help=('Value to (lower) threshold maps'))
+    parser.add_argument('--inflate', action='store_true',
+                        help=('Instead of plotting on pial surface,'
+                              'plot on inflated brain'))
 
     return parser
 
