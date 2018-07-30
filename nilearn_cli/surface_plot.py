@@ -33,7 +33,7 @@ def _rename_outfile(nifti):
     return name_sans_extension + '.png'
 
 
-def plot_full_surf_stat_map(stat, outname, title=None, **kwargs):
+def plot_full_surf_stat_map(stat, outname, title=None, save=True, **kwargs):
     """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
     Plots both hemispheres and both medial and lateral views of the brain.
     The surface mesh used for plotting is freesurfer's fsaverage.
@@ -76,7 +76,8 @@ def plot_full_surf_stat_map(stat, outname, title=None, **kwargs):
     if title is not None:
         fig.suptitle(title)
 
-    plt.savefig(outname, dpi=100, bbox_inches='tight')
+    if save:
+        plt.savefig(outname, dpi=100, bbox_inches='tight')
 
 
 def _plot_wrapper(tup, outdir=None, threshold=None):
