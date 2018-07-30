@@ -91,7 +91,7 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
         ax5.patch.set_alpha(0.)
 
     if title is not None:
-        fig.suptitle(title)
+        fig.suptitle(title, fontsize=12, y=0.95)
 
     if save:
         plt.savefig(outname, dpi=100, bbox_inches='tight')
@@ -152,7 +152,7 @@ def main(args):
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
         call(['montage', op.join(outdir, '*.png'),
-              '-geometry', '+2+2', outfile])
+              '-geometry', '+1+1', outfile])
 
 
 def _cli_parser():
