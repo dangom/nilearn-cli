@@ -105,19 +105,25 @@ def main(args):
     outdir = op.join(op.dirname(args.infile), 'surface_plot')
     os.makedirs(outdir, exist_ok=True)
 
-    pool = multiprocessing.Pool()
-    images = image.iter_img(args.infile)
+    if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
+        img = image.load_img(args.infile)
+        plot_full_surf_stat_map(img, outfile, title=f'Volume 00')
 
-    pool.map(partial(_plot_wrapper, outdir=outdir, threshold=args.threshold),
-             enumerate(images))
+    else:  # Handle 4D images.
+        pool = multiprocessing.Pool()
+        images = image.iter_img(args.infile)
+        pool.map(partial(_plot_wrapper, outdir=outdir,
+                         threshold=args.threshold),
+                 enumerate(images))
 
-    # Non parallel version:
-    # for idx, img in enumerate(images):
-    #     outname = op.join(outdir, f'{idx:02}.png')
-    #     plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
+        # Non parallel version, for completion:
+        # for idx, img in enumerate(images):
+        #     outname = op.join(outdir, f'{idx:02}.png')
+        #     plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
 
-    call(['montage', op.join(outdir, '*.png'),
-          '-geometry', '+2+2', outfile])
+        # Use ImageMagick's montage to create a mosaic of all individual plots.
+        call(['montage', op.join(outdir, '*.png'),
+              '-geometry', '+2+2', outfile])
 
 
 def _cli_parser():
