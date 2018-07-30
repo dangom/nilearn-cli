@@ -3,8 +3,11 @@ nilearn-cli
 
 -----
 Convenient command line tools for `Nilearn <http://nilearn.github.io/>`_.
-Currently only provides a single tool: connectome, which generates connectivity matrices from an input dataset.
+Currently provides three tools:
 
+- connectome, which generates connectivity matrices from an input dataset.
+- region_extraction, which generates masks from connected regions in a statistical map.
+- surface_plot, which plots volumetric statistical maps into a surface and outputs a PNG.
 
 .. contents:: **Table of Contents**
     :backlinks: none
@@ -12,13 +15,12 @@ Currently only provides a single tool: connectome, which generates connectivity 
 Installation
 ------------
 
-nilearn-cli is distributed on `PyPI <https://pypi.org>`_ as a universal
-wheel and is available on Linux/macOS and Windows and supports
-Python 3.5+ and PyPy.
+nilearn-cli is not yet distributed on `PyPI <https://pypi.org>`_ as a universal
+wheel. To install it, clone the repo and run:
 
 .. code-block:: bash
 
-    $ pip install nilearn-cli
+    $ python setup.py install
 
 License
 -------
