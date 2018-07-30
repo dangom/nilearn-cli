@@ -78,7 +78,7 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
 
     if ts is not None:
         ax5 = fig.add_axes([0.34, 0.465, 0.38, 0.06])
-        ax5.plot(ts, 'r', linewidth=0.8)
+        ax5.plot(ts, 'dimgray', linewidth=0.8)
         ax5.axis('off')
         ax5.patch.set_alpha(0.)
 
