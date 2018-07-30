@@ -6,8 +6,10 @@ mosaic.
 """
 
 import argparse
+import multiprocessing
 import os
 import os.path as op
+from functools import partial
 from subprocess import call
 
 import matplotlib.pyplot as plt
@@ -74,6 +76,12 @@ def plot_full_surf_stat_map(stat, outname, title=None, **kwargs):
     plt.savefig(outname, dpi=100, bbox_inches='tight')
 
 
+def _plot_wrapper(tup, outdir=None):
+    idx, img = tup
+    outname = op.join(outdir, f'{idx:02}.png')
+    plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
+
+
 def main(args):
     # -- Check inputs --
     assert op.exists(args.infile), 'Input file not found.'
@@ -88,10 +96,16 @@ def main(args):
 
     outdir = op.join(op.dirname(args.infile), 'surface_plot')
     os.makedirs(outdir, exist_ok=True)
+
+    pool = multiprocessing.Pool()
     images = image.iter_img(args.infile)
-    for idx, img in enumerate(images):
-        outname = op.join(outdir, f'{idx:02}.png')
-        plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
+
+    pool.map(partial(_plot_wrapper, outdir=outdir), enumerate(images))
+
+    # Non parallel version:
+    # for idx, img in enumerate(images):
+    #     outname = op.join(outdir, f'{idx:02}.png')
+    #     plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
 
     call(['montage', op.join(outdir, '*.png'),
           '-geometry', '+2+2', outfile])
