@@ -91,7 +91,8 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
         ax5.patch.set_alpha(0.)
 
     if title is not None:
-        fig.suptitle(title, fontsize=12, y=0.95)
+        # y defaults to 0.98. The value of 0.93 lowers it a bit.
+        fig.suptitle(title, fontsize=12, y=0.93)
 
     if save:
         plt.savefig(outname, dpi=100, bbox_inches='tight')
