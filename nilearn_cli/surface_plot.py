@@ -107,7 +107,7 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
 
 
 def _plot_wrapper(tup, outdir=None, threshold=None, mask=None,
-                  tsfile=None, inflate=False):
+                  tsfile=None, inflate=False, **kwargs):
     """Small wrapper at the module level compatible with pool.map()
     to call multiple instances of plot_full_surf_stat_map in parallel.
     """
@@ -116,7 +116,8 @@ def _plot_wrapper(tup, outdir=None, threshold=None, mask=None,
     if tsfile is not None:
         ts = np.loadtxt(tsfile)[:, idx]
     plot_full_surf_stat_map(img, outname, ts=ts, title=f'Volume {idx:02}',
-                            threshold=threshold, mask=mask, inflate=inflate)
+                            threshold=threshold, mask=mask, inflate=inflate,
+                            **kwargs)
 
 
 def main(args):
@@ -130,8 +131,8 @@ def main(args):
     else:
         outfile = args.outfile
 
-    if op.exists(outfile):
-        raise NameError('Outfile already exists. Not going to overwrite.')
+    # if op.exists(outfile):
+    #     raise NameError('Outfile already exists. Not going to overwrite.')
 
     originaldir = op.dirname(args.infile)
     outdir = op.join(originaldir, 'surface_plot')
@@ -153,7 +154,7 @@ def main(args):
 
         pool.map(partial(_plot_wrapper, outdir=outdir,
                          threshold=args.threshold, tsfile=tsfile,
-                         inflate=args.inflate),
+                         inflate=args.inflate, mask=args.mask),
                  enumerate(images))
 
         # Non parallel version, for completion:
@@ -163,7 +164,7 @@ def main(args):
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
         call(['montage', op.join(outdir, '*.png'), '-trim',
-              '-geometry', '+1+1', outfile])
+              '-geometry', '+7+7', outfile])
 
 
 def _cli_parser():
