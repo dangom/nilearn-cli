@@ -136,16 +136,15 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
         plt.savefig(outname, dpi=100, bbox_inches='tight')
 
 
-def _plot_wrapper(tup, outdir=None, threshold=None, mask=None,
+def _plot_wrapper(tup, outdir=None, threshold=None, mask=None, label='Volume',
                   tsfile=None, inflate=False, **kwargs):
     """Small wrapper at the module level compatible with pool.map()
     to call multiple instances of plot_full_surf_stat_map in parallel.
     """
     idx, img = tup
     outname = op.join(outdir, f'{idx:04}.png')
-    if tsfile is not None:
-        ts = np.loadtxt(tsfile)[:, idx]
-    plot_full_surf_stat_map(img, outname, ts=ts, title=f'Volume {idx:02}',
+    ts = np.loadtxt(tsfile)[:, idx] if tsfile is not None else None
+    plot_full_surf_stat_map(img, outname, ts=ts, title=f'{label} {(idx+1):02}',
                             threshold=threshold, mask=mask, inflate=inflate,
                             **kwargs)
 
@@ -166,7 +165,8 @@ def main(args):
     # TODO simplify if else to avoid duplication.
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
         img = image.load_img(args.infile)
-        plot_full_surf_stat_map(img, outfile, title=f'Volume 00', cmap=cmap,
+        plot_full_surf_stat_map(img, outfile, title=args.label,
+                                cmap=cmap,
                                 bg_on_data=args.bg_on_data, vmax=args.vmax,
                                 threshold=args.threshold,
                                 inflate=args.inflate, mask=args.mask)
@@ -184,6 +184,7 @@ def main(args):
             tsfile = None
 
         pool.map(partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
+                         label=args.label,
                          bg_on_data=args.bg_on_data, vmax=args.vmax,
                          threshold=args.threshold, tsfile=tsfile,
                          inflate=args.inflate, mask=args.mask),
@@ -202,6 +203,8 @@ def _cli_parser():
     parser.add_argument('--outfile', type=str, default=None,
                         help=('Name of output file. Default same name '
                               'as file but with png extension'))
+    parser.add_argument('--label', type=str, default='Volume projected on surface',
+                        help=('Label for individual plots'))
     parser.add_argument('--threshold', type=float, default=None,
                         help=('Value to (lower) threshold maps'))
     parser.add_argument('--vmax', type=float, default=None,
