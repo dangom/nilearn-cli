@@ -9,11 +9,12 @@ import argparse
 import multiprocessing
 import os
 import os.path as op
+import tempfile
 from functools import partial
 from subprocess import call
 
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from nilearn import datasets, image, plotting, surface
@@ -173,8 +174,7 @@ def main(args):
 
     else:  # Handle 4D images.
         originaldir = op.dirname(args.infile)
-        outdir = op.join(originaldir, 'surface_plot')
-        os.makedirs(outdir, exist_ok=True)
+        tmpdir = tempfile.mkdtemp()
 
         pool = multiprocessing.Pool()
         images = image.iter_img(args.infile)
@@ -184,14 +184,14 @@ def main(args):
         else:
             tsfile = None
 
-        pool.map(partial(_plot_wrapper, outdir=outdir, cmap=cmap,
+        pool.map(partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
                          bg_on_data=args.bg_on_data, vmax=args.vmax,
                          threshold=args.threshold, tsfile=tsfile,
                          inflate=args.inflate, mask=args.mask),
                  enumerate(images))
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
-        call(['montage', op.join(outdir, '*.png'), '-trim',
+        call(['montage', op.join(tmpdir, '*.png'), '-trim',
               '-geometry', '+9+9', outfile])
 
 
