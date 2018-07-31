@@ -22,31 +22,32 @@ from nilearn._utils.extmath import fast_abs_percentile
 FSAVERAGE = datasets.fetch_surf_fsaverage()
 
 
-def hcp_cmap():
+def hcp_cmap(name='roy_big_bl'):
 
     # Original colormap definition:
     # https://github.com/Washington-University/workbench/blob/bleeding/src/Files/PaletteFile.cxx#L1178
 
-    roy_big_bl = [(255, 255, 0),
-                  (255, 200, 0),
-                  (255, 120, 0),
-                  (255, 0, 0),
-                  (200, 0, 0),
-                  (150, 0, 0),
-                  (100, 0, 0),
-                  (60, 0, 0),
-                  (0, 0, 0),
-                  (0, 0, 80),
-                  (0, 0, 170),
-                  (75, 0, 125),
-                  (125, 0, 160),
-                  (75, 125, 0),
-                  (0, 200, 0),
-                  (0, 255, 0),
-                  (0, 255, 255),
-                  (0, 255, 255)]
+    cmaps = {
 
-    return mpl.colors.ListedColormap(np.array(roy_big_bl[::-1])/255)
+        # Written in reversed order, that's why [::-1]
+        'roy_big_bl': np.array([(255, 255, 0), (255, 200, 0),
+                                (255, 120, 0), (255, 0, 0),
+                                (200, 0, 0), (150, 0, 0),
+                                (100, 0, 0), (60, 0, 0),
+                                (0, 0, 0), (0, 0, 80),
+                                (0, 0, 170), (75, 0, 125),
+                                (125, 0, 160), (75, 125, 0),
+                                (0, 200, 0), (0, 255, 0),
+                                (0, 255, 255), (0, 255, 255)][::-1]) / 255,
+
+        'videen_style': ['#000000', '#bbbbbb', '#dddddd', '#ffffff',
+                         '#ff388d', '#e251e2', '#10b010', '#00ff00',
+                         '#00ffff', '#000000', '#660033', '#33334c',
+                         '#4c4c7f', '#7f7fcc', '#00ff00', '#10b010',
+                         '#ffff00', '#ff9900', '#ff6900', '#ff0000']
+    }
+
+    return mpl.colors.ListedColormap(cmaps[name])
 
 
 def _rename_outfile(nifti):
@@ -80,7 +81,7 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
 
     # Vmax scaled for optimal dynamic range.
     if vmax is None:
-        vmax = fast_abs_percentile(stat.dataobj, 99.7)
+        vmax = fast_abs_percentile(stat.dataobj, 99.8)
 
     # Plot on inflated brain or on pial surface?
     if inflate:
