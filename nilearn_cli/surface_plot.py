@@ -161,10 +161,6 @@ def main(args):
     else:
         outfile = args.outfile
 
-    originaldir = op.dirname(args.infile)
-    outdir = op.join(originaldir, 'surface_plot')
-    os.makedirs(outdir, exist_ok=True)
-
     cmap = hcp_cmap() if args.deceive else 'cold_hot'
 
     # TODO simplify if else to avoid duplication.
@@ -176,6 +172,10 @@ def main(args):
                                 inflate=args.inflate, mask=args.mask)
 
     else:  # Handle 4D images.
+        originaldir = op.dirname(args.infile)
+        outdir = op.join(originaldir, 'surface_plot')
+        os.makedirs(outdir, exist_ok=True)
+
         pool = multiprocessing.Pool()
         images = image.iter_img(args.infile)
 
