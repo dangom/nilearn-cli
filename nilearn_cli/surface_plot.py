@@ -158,7 +158,7 @@ def main(args):
         #     plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
-        call(['montage', op.join(outdir, '*.png'),
+        call(['montage', op.join(outdir, '*.png'), '-trim',
               '-geometry', '+1+1', outfile])
 
 
