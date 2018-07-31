@@ -23,6 +23,10 @@ FSAVERAGE = datasets.fetch_surf_fsaverage()
 
 
 def hcp_cmap():
+
+    # Original colormap definition:
+    # https://github.com/Washington-University/workbench/blob/bleeding/src/Files/PaletteFile.cxx#L1178
+
     roy_big_bl = [(255, 255, 0),
                   (255, 200, 0),
                   (255, 120, 0),
