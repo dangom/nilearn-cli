@@ -13,12 +13,36 @@ from functools import partial
 from subprocess import call
 
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from nilearn import datasets, image, plotting, surface
-from nilearn._utils.extmath import fast_abs_percentile
+# from nilearn._utils.extmath import fast_abs_percentile
 
 FSAVERAGE = datasets.fetch_surf_fsaverage()
+
+
+def hcp_cmap():
+    roy_big_bl = [(255, 255, 0),
+                  (255, 200, 0),
+                  (255, 120, 0),
+                  (255, 0, 0),
+                  (200, 0, 0),
+                  (150, 0, 0),
+                  (100, 0, 0),
+                  (60, 0, 0),
+                  (0, 0, 0),
+                  (0, 0, 80),
+                  (0, 0, 170),
+                  (75, 0, 125),
+                  (125, 0, 160),
+                  (75, 125, 0),
+                  (0, 200, 0),
+                  (0, 255, 0),
+                  (0, 255, 255),
+                  (0, 255, 255)]
+
+    return mpl.colors.ListedColormap(np.array(roy_big_bl[::-1])/255)
 
 
 def _rename_outfile(nifti):
@@ -35,7 +59,7 @@ def _rename_outfile(nifti):
 
 
 def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
-                            inflate=False, save=True, **kwargs):
+                            inflate=False, save=True, vmax=None, **kwargs):
     """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
     Plots both hemispheres and both medial and lateral views of the brain.
     The surface mesh used for plotting is freesurfer's fsaverage.
@@ -51,7 +75,8 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
                                     mask_img=mask)
 
     # Vmax scaled for optimal dynamic range.
-    vmax = fast_abs_percentile(stat.dataobj, 99.7)
+    if vmax is None:
+        vmax = 3.1  # fast_abs_percentile(stat.dataobj, 99.7)
 
     # Plot on inflated brain or on pial surface?
     if inflate:
@@ -90,10 +115,11 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
 
     if ts is not None:
         # x0, y0, width, height = 0.34, 0.465, 0.38, 0.06
-        x0, y0 = 0.1, 0.46
+        # x0 left -> right, y0 top -> down.
+        x0, y0 = 0.15, 0.445
         width, height = (1.05 - 2*x0), 0.12
         ax5 = fig.add_axes([x0, y0, width, height], zorder=-1)
-        ax5.plot(ts[::2], 'gray', linewidth=0.8)
+        ax5.plot(ts[::2], 'dimgray', linewidth=0.8)
         ax5.axis('off')
         # Only necessary if ax5 is on top. (zorder larger than other axes)
         # ax5.patch.set_alpha(0.)
@@ -152,7 +178,8 @@ def main(args):
         else:
             tsfile = None
 
-        pool.map(partial(_plot_wrapper, outdir=outdir,
+        pool.map(partial(_plot_wrapper, outdir=outdir, cmap=hcp_cmap(),
+                         bg_on_data=args.bg_on_data,
                          threshold=args.threshold, tsfile=tsfile,
                          inflate=args.inflate, mask=args.mask),
                  enumerate(images))
@@ -164,7 +191,7 @@ def main(args):
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
         call(['montage', op.join(outdir, '*.png'), '-trim',
-              '-geometry', '+7+7', outfile])
+              '-geometry', '+9+9', outfile])
 
 
 def _cli_parser():
@@ -180,6 +207,9 @@ def _cli_parser():
     parser.add_argument('--inflate', action='store_true',
                         help=('Instead of plotting on pial surface,'
                               'plot on inflated brain'))
+    parser.add_argument('--bg-on-data', action='store_true',
+                        help=('Mix background image with statistical image'
+                              'Modifies stats according to sulcus depth.'))
     parser.add_argument('--mask', type=str, default=None,
                         help=('Mask to compute volume to surface.'))
 
