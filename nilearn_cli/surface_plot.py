@@ -157,19 +157,18 @@ def main(args):
     else:
         outfile = args.outfile
 
-    # if op.exists(outfile):
-    #     raise NameError('Outfile already exists. Not going to overwrite.')
-
     originaldir = op.dirname(args.infile)
     outdir = op.join(originaldir, 'surface_plot')
     os.makedirs(outdir, exist_ok=True)
 
     cmap = hcp_cmap() if args.deceive else 'cold_hot'
 
+    # TODO simplify if else to avoid duplication.
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
         img = image.load_img(args.infile)
         plot_full_surf_stat_map(img, outfile, title=f'Volume 00', cmap=cmap,
                                 bg_on_data=args.bg_on_data, vmax=args.vmax,
+                                threshold=args.threshold,
                                 inflate=args.inflate, mask=args.mask)
 
     else:  # Handle 4D images.
@@ -186,11 +185,6 @@ def main(args):
                          threshold=args.threshold, tsfile=tsfile,
                          inflate=args.inflate, mask=args.mask),
                  enumerate(images))
-
-        # Non parallel version, for completion:
-        # for idx, img in enumerate(images):
-        #     outname = op.join(outdir, f'{idx:04}.png')
-        #     plot_full_surf_stat_map(img, outname, title=f'Volume {idx:02}')
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
         call(['montage', op.join(outdir, '*.png'), '-trim',
