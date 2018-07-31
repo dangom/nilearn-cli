@@ -34,7 +34,7 @@ def _rename_outfile(nifti):
     return name_sans_extension + '.png'
 
 
-def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
+def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
                             inflate=False, save=True, **kwargs):
     """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
     Plots both hemispheres and both medial and lateral views of the brain.
@@ -45,8 +45,10 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
     ((ax_ll, ax_rl), (ax_lm, ax_rm)) = axes
 
     # Compute the surface textures from the statistical map.
-    texture = surface.vol_to_surf(stat, FSAVERAGE.pial_right)
-    texture_l = surface.vol_to_surf(stat, FSAVERAGE.pial_left)
+    texture_r = surface.vol_to_surf(stat, FSAVERAGE.pial_right,
+                                    mask_img=mask)
+    texture_l = surface.vol_to_surf(stat, FSAVERAGE.pial_left,
+                                    mask_img=mask)
 
     # Vmax scaled for optimal dynamic range.
     vmax = fast_abs_percentile(stat.dataobj, 99.7)
@@ -59,11 +61,11 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
         leftsurf = FSAVERAGE.pial_left
         rightsurf = FSAVERAGE.pial_right
 
-    plotting.plot_surf_stat_map(rightsurf, texture,
+    plotting.plot_surf_stat_map(rightsurf, texture_r,
                                 hemi='right', axes=ax_rl,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
-    plotting.plot_surf_stat_map(rightsurf, texture,
+    plotting.plot_surf_stat_map(rightsurf, texture_r,
                                 hemi='right', view='medial', axes=ax_rm,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
@@ -104,7 +106,7 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
         plt.savefig(outname, dpi=100, bbox_inches='tight')
 
 
-def _plot_wrapper(tup, outdir=None, threshold=None,
+def _plot_wrapper(tup, outdir=None, threshold=None, mask=None,
                   tsfile=None, inflate=False):
     """Small wrapper at the module level compatible with pool.map()
     to call multiple instances of plot_full_surf_stat_map in parallel.
@@ -114,12 +116,14 @@ def _plot_wrapper(tup, outdir=None, threshold=None,
     if tsfile is not None:
         ts = np.loadtxt(tsfile)[:, idx]
     plot_full_surf_stat_map(img, outname, ts=ts, title=f'Volume {idx:02}',
-                            threshold=threshold, inflate=inflate)
+                            threshold=threshold, mask=mask, inflate=inflate)
 
 
 def main(args):
     # -- Check inputs --
     assert op.exists(args.infile), 'Input file not found.'
+    if args.mask is not None:
+        assert op.exists(args.mask), 'Mask file not found.'
 
     if args.outfile is None:
         outfile = _rename_outfile(args.infile)
@@ -136,7 +140,7 @@ def main(args):
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
         img = image.load_img(args.infile)
         plot_full_surf_stat_map(img, outfile, title=f'Volume 00',
-                                inflate=args.inflate)
+                                inflate=args.inflate, mask=args.mask)
 
     else:  # Handle 4D images.
         pool = multiprocessing.Pool()
@@ -175,6 +179,8 @@ def _cli_parser():
     parser.add_argument('--inflate', action='store_true',
                         help=('Instead of plotting on pial surface,'
                               'plot on inflated brain'))
+    parser.add_argument('--mask', type=str, default=None,
+                        help=('Mask to compute volume to surface.'))
 
     return parser
 
