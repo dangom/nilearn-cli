@@ -7,7 +7,6 @@ mosaic in the case of 4D images.
 
 import argparse
 import multiprocessing
-import os
 import os.path as op
 import tempfile
 from functools import partial
