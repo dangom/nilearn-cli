@@ -17,7 +17,7 @@ import matplotlib as mpl
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from nilearn import datasets, image, plotting, surface
-# from nilearn._utils.extmath import fast_abs_percentile
+from nilearn._utils.extmath import fast_abs_percentile
 
 FSAVERAGE = datasets.fetch_surf_fsaverage()
 
@@ -76,7 +76,7 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
 
     # Vmax scaled for optimal dynamic range.
     if vmax is None:
-        vmax = 3.1  # fast_abs_percentile(stat.dataobj, 99.7)
+        vmax = fast_abs_percentile(stat.dataobj, 99.7)
 
     # Plot on inflated brain or on pial surface?
     if inflate:
@@ -164,9 +164,12 @@ def main(args):
     outdir = op.join(originaldir, 'surface_plot')
     os.makedirs(outdir, exist_ok=True)
 
+    cmap = hcp_cmap() if args.deceive else 'cold_hot'
+
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
         img = image.load_img(args.infile)
-        plot_full_surf_stat_map(img, outfile, title=f'Volume 00',
+        plot_full_surf_stat_map(img, outfile, title=f'Volume 00', cmap=cmap,
+                                bg_on_data=args.bg_on_data, vmax=args.vmax,
                                 inflate=args.inflate, mask=args.mask)
 
     else:  # Handle 4D images.
@@ -178,8 +181,8 @@ def main(args):
         else:
             tsfile = None
 
-        pool.map(partial(_plot_wrapper, outdir=outdir, cmap=hcp_cmap(),
-                         bg_on_data=args.bg_on_data,
+        pool.map(partial(_plot_wrapper, outdir=outdir, cmap=cmap,
+                         bg_on_data=args.bg_on_data, vmax=args.vmax,
                          threshold=args.threshold, tsfile=tsfile,
                          inflate=args.inflate, mask=args.mask),
                  enumerate(images))
@@ -204,6 +207,8 @@ def _cli_parser():
                               'as file but with png extension'))
     parser.add_argument('--threshold', type=float, default=None,
                         help=('Value to (lower) threshold maps'))
+    parser.add_argument('--vmax', type=float, default=None,
+                        help=('Set colorbar limit'))
     parser.add_argument('--inflate', action='store_true',
                         help=('Instead of plotting on pial surface,'
                               'plot on inflated brain'))
@@ -212,6 +217,9 @@ def _cli_parser():
                               'Modifies stats according to sulcus depth.'))
     parser.add_argument('--mask', type=str, default=None,
                         help=('Mask to compute volume to surface.'))
+    parser.add_argument('--deceive', action='store_true',
+                        help=(('Use HCP colormap. Warning: Non-perceptually uniform.'
+                               'Colormap may generate clusters that do not really exist.')))
 
     return parser
 
