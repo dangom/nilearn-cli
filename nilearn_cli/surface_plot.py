@@ -81,14 +81,20 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None,
     # The fix is simple, bring the camera closer to the object.
     for ax in axes.flatten():
         ax.dist = 6
+        # Alpha set to 0 so that the timeseries is visible.
+        ax.patch.set_alpha(0.)
     # Remove whitespace between subplots.
     fig.subplots_adjust(wspace=-0.02, hspace=0.0)
 
     if ts is not None:
-        ax5 = fig.add_axes([0.34, 0.465, 0.38, 0.06])
-        ax5.plot(ts, 'dimgray', linewidth=0.8)
+        # x0, y0, width, height = 0.34, 0.465, 0.38, 0.06
+        x0, y0 = 0.1, 0.46
+        width, height = (1.05 - 2*x0), 0.12
+        ax5 = fig.add_axes([x0, y0, width, height], zorder=-1)
+        ax5.plot(ts[::2], 'gray', linewidth=0.8)
         ax5.axis('off')
-        ax5.patch.set_alpha(0.)
+        # Only necessary if ax5 is on top. (zorder larger than other axes)
+        # ax5.patch.set_alpha(0.)
 
     if title is not None:
         # y defaults to 0.98. The value of 0.93 lowers it a bit.
