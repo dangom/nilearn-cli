@@ -66,12 +66,24 @@ def _rename_outfile(nifti):
     return name_sans_extension + '.png'
 
 
-def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
-                            inflate=False, save=True, vmax=None, **kwargs):
+def plot_full_surf_stat_map(stat, title=None, ts=None, mask=None,
+                            inflate=False, outfile=None,
+                            vmax=None, **kwargs):
     """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
-    Plots both hemispheres and both medial and lateral views of the brain.
-    The surface mesh used for plotting is freesurfer's fsaverage.
+    Plots a collage of both hemispheres and both medial and lateral views of
+    the brain. The surface mesh used for plotting is freesurfer's fsaverage.
+
+    :param stat: A 3D statistical map (Nilearn's niimg object)
+    :param title: A title for the image
+    :param ts: Optional timeseries to be plotted in the background.
+    :param mask: Optional mask passed to nilearn's vol_to_surf.
+    :param inflate: If True, plot on inflated, if False, on pial.
+    :param outfile: Optional output filename to save figure.
+    :param vmax: Colormap vmax limit
+
+    Other kwargs are passed to Nilearn's plot_surf_stat_map.
     """
+
     fig, axes = plt.subplots(dpi=100, nrows=2, ncols=2,
                              subplot_kw={'projection': '3d'})
     ((ax_ll, ax_rl), (ax_lm, ax_rm)) = axes
@@ -136,8 +148,8 @@ def plot_full_surf_stat_map(stat, outname, title=None, ts=None, mask=None,
         # y defaults to 0.98. The value of 0.93 lowers it a bit.
         fig.suptitle(title, fontsize=12, y=0.93)
 
-    if save:
-        plt.savefig(outname, dpi=100, bbox_inches='tight')
+    if outfile is not None:
+        plt.savefig(outfile, dpi=100, bbox_inches='tight')
 
 
 def _plot_wrapper(tup, outdir=None, threshold=None, mask=None, label='Volume',
@@ -146,9 +158,10 @@ def _plot_wrapper(tup, outdir=None, threshold=None, mask=None, label='Volume',
     to call multiple instances of plot_full_surf_stat_map in parallel.
     """
     idx, img = tup
-    outname = op.join(outdir, f'{idx:04}.png')
+    outfile = op.join(outdir, f'{idx:04}.png')
     ts = np.loadtxt(tsfile)[:, idx] if tsfile is not None else None
-    plot_full_surf_stat_map(img, outname, ts=ts, title=f'{label} {(idx+1):02}',
+    plot_full_surf_stat_map(img, outfile=outfile,
+                            ts=ts, title=f'{label} {(idx+1):02}',
                             threshold=threshold, mask=mask, inflate=inflate,
                             **kwargs)
 
@@ -169,7 +182,7 @@ def main(args):
     # TODO simplify if else to avoid duplication.
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
         img = image.load_img(args.infile)
-        plot_full_surf_stat_map(img, outfile, title=args.label,
+        plot_full_surf_stat_map(img, outfile=outfile, title=args.label,
                                 cmap=cmap,
                                 bg_on_data=args.bg_on_data, vmax=args.vmax,
                                 threshold=args.threshold,
