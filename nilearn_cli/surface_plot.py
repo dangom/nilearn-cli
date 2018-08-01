@@ -16,6 +16,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
 from nilearn import datasets, image, plotting, surface
 from nilearn._utils.extmath import fast_abs_percentile
 
@@ -30,15 +31,16 @@ def hcp_cmap(name='roy_big_bl'):
     cmaps = {
 
         # Written in reversed order, that's why [::-1]
-        'roy_big_bl': np.array([(255, 255, 0), (255, 200, 0),
-                                (255, 120, 0), (255, 0, 0),
-                                (200, 0, 0), (150, 0, 0),
-                                (100, 0, 0), (60, 0, 0),
-                                (0, 0, 0), (0, 0, 80),
-                                (0, 0, 170), (75, 0, 125),
-                                (125, 0, 160), (75, 125, 0),
-                                (0, 200, 0), (0, 255, 0),
-                                (0, 255, 255), (0, 255, 255)][::-1]) / 255,
+        'roy_big_bl': (np.array([(255, 255, 0), (255, 200, 0),
+                                 (255, 120, 0), (255, 0, 0),
+                                 (200, 0, 0), (150, 0, 0),
+                                 (100, 0, 0), (60, 0, 0),
+                                 (0, 0, 0), (0, 0, 80),
+                                 (0, 0, 170), (75, 0, 125),
+                                 (125, 0, 160), (75, 125, 0),
+                                 (0, 200, 0), (0, 255, 0),
+                                 (0, 255, 255),
+                                 (0, 255, 255)][::-1]) / 255).tolist(),
 
         'videen_style': ['#000000', '#bbbbbb', '#dddddd', '#ffffff',
                          '#ff388d', '#e251e2', '#10b010', '#00ff00',
@@ -47,7 +49,8 @@ def hcp_cmap(name='roy_big_bl'):
                          '#ffff00', '#ff9900', '#ff6900', '#ff0000']
     }
 
-    return mpl.colors.ListedColormap(cmaps[name])
+    return mpl.colors.LinearSegmentedColormap.from_list(
+        name, cmaps[name])
 
 
 def _rename_outfile(nifti):
