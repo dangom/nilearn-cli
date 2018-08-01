@@ -11,6 +11,7 @@ import os.path as op
 import tempfile
 from functools import partial
 from subprocess import call
+from sys import platform
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -192,20 +193,28 @@ def main(args):
         originaldir = op.dirname(args.infile)
         tmpdir = tempfile.mkdtemp()
 
-        pool = multiprocessing.Pool()
-        images = image.iter_img(args.infile)
-
         if op.exists(op.join(originaldir, 'melodic_mix')):
             tsfile = op.join(originaldir, 'melodic_mix')
         else:
             tsfile = None
 
-        pool.map(partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
-                         label=args.label,
-                         bg_on_data=args.bg_on_data, vmax=args.vmax,
-                         threshold=args.threshold, tsfile=tsfile,
-                         inflate=args.inflate, mask=args.mask),
-                 enumerate(images))
+        images = image.iter_img(args.infile)
+
+        if platform != 'darwin':
+            pool = multiprocessing.Pool()
+            pool.map(partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
+                             label=args.label,
+                             bg_on_data=args.bg_on_data, vmax=args.vmax,
+                             threshold=args.threshold, tsfile=tsfile,
+                             inflate=args.inflate, mask=args.mask),
+                     enumerate(images))
+        else:
+            all(map(partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
+                            label=args.label,
+                            bg_on_data=args.bg_on_data, vmax=args.vmax,
+                            threshold=args.threshold, tsfile=tsfile,
+                            inflate=args.inflate, mask=args.mask),
+                    enumerate(images)))
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
         call(['montage', op.join(tmpdir, '*.png'), '-trim',
