@@ -199,22 +199,17 @@ def main(args):
             tsfile = None
 
         images = image.iter_img(args.infile)
+        func = partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
+                       label=args.label,
+                       bg_on_data=args.bg_on_data, vmax=args.vmax,
+                       threshold=args.threshold, tsfile=tsfile,
+                       inflate=args.inflate, mask=args.mask)
 
         if platform != 'darwin':
             pool = multiprocessing.Pool()
-            pool.map(partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
-                             label=args.label,
-                             bg_on_data=args.bg_on_data, vmax=args.vmax,
-                             threshold=args.threshold, tsfile=tsfile,
-                             inflate=args.inflate, mask=args.mask),
-                     enumerate(images))
+            pool.map(func, enumerate(images))
         else:
-            all(map(partial(_plot_wrapper, outdir=tmpdir, cmap=cmap,
-                            label=args.label,
-                            bg_on_data=args.bg_on_data, vmax=args.vmax,
-                            threshold=args.threshold, tsfile=tsfile,
-                            inflate=args.inflate, mask=args.mask),
-                    enumerate(images)))
+            all(map(func, enumerate(images)))
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
         call(['montage', op.join(tmpdir, '*.png'), '-trim',
