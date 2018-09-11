@@ -63,7 +63,7 @@ def _fetch_msdl():
     return msdl
 
 
-def _rename_outfile(nifti, atlas, kind='correlation'):
+def _rename_outfile(nifti, atlas, kind='correlation', confounds=False):
     """Hackish change of extension from nifti to png.
     Also add some info on the atlas use and the kind of map computed
     """
@@ -74,7 +74,10 @@ def _rename_outfile(nifti, atlas, kind='correlation'):
     else:
         raise NameError('Cannot recognize nifti extension name.')
 
-    return name_sans_extension + '_' + atlas + '_' + kind + '.png'
+    name = name_sans_extension + '_' + atlas + '_' + kind
+    if confounds:
+        name += '_wconfounds'
+    return name + '.png'
 
 
 def fetch_atlas(name):
@@ -196,9 +199,15 @@ def main(args):
 
     if args.confounds is not None:
         assert op.exists(args.confounds), 'Confounds file not found.'
+        confounds = args.confounds
+    elif args.fmriprepconfounds:
+        confounds = args.infile[:args.infile.find('bold')+4] + '_confounds.tsv'
+    else:
+        confounds = None
 
     if args.outfile is None:
-        outfile = _rename_outfile(args.infile, args.atlas, args.kind)
+        conf = True if confounds is not None else False
+        outfile = _rename_outfile(args.infile, args.atlas, args.kind, conf)
     else:
         outfile = args.outfile
 
@@ -209,14 +218,14 @@ def main(args):
     # -- Compute and save the connectome --
     if args.atlas in ATLAS_COORDS.keys():
         atlas_rois, atlas_labels = fetch_coords(args.atlas)
-        ts = extract_timeseries_coords(args.infile, atlas_rois, args.confounds)
+        ts = extract_timeseries_coords(args.infile, atlas_rois, confounds)
     elif args.atlas in ATLAS_PROBABILISTIC.keys():
         maps, atlas_labels = fetch_probabilistic(args.atlas)
         ts = extract_timeseries_probabilistic(args.infile, maps,
-                                              args.confounds)
+                                              confounds)
     else:
         atlas_filename, atlas_labels = fetch_atlas(args.atlas)
-        ts = extract_timeseries(args.infile, atlas_filename, args.confounds)
+        ts = extract_timeseries(args.infile, atlas_filename, confounds)
 
     kind = args.kind if (
         args.kind != 'partialcorrelation') else 'partial correlation'
@@ -245,6 +254,9 @@ def _cli_parser():
 
     parser.add_argument('--confounds', default=None,
                         help='Path to tsv or csv file of confounds.')
+
+    parser.add_argument('--fmriprepconfounds', action='store_true',
+                        help='Autodetect fmriprep confound file')
 
     parser.add_argument('--title', default=None,
                         help='Add a title to the figure')
