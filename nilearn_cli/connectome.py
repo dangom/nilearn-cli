@@ -218,7 +218,12 @@ def main(args):
         atlas_filename, atlas_labels = fetch_atlas(args.atlas)
         ts = extract_timeseries(args.infile, atlas_filename, args.confounds)
 
-    connectivity_matrix = generate_connectivity_matrix(ts, args.kind)
+    kind = args.kind if (
+        args.kind != 'partialcorrelation') else 'partial correlation'
+    connectivity_matrix = generate_connectivity_matrix(ts, kind)
+    if args.savetxt:
+        outfiletxt = op.splitext(outfile)[0] + '.txt'
+        np.savetxt(outfiletxt, connectivity_matrix, fmt='%f')
     savefig_connectome(connectivity_matrix, outfile, title=args.title,
                        labels=atlas_labels, reorder=args.no_reorder)
 
@@ -246,6 +251,7 @@ def _cli_parser():
 
     parser.add_argument('--kind', default='correlation',
                         choices=['correlation',
+                                 'partialcorrelation',
                                  'partial correlation',
                                  'tangent',
                                  'covariance',
@@ -255,6 +261,9 @@ def _cli_parser():
     parser.add_argument('--outfile', type=str, default=None,
                         help=('Name of output file. Default same name '
                               'as file but with png extension'))
+
+    parser.add_argument('--savetxt', action='store_true',
+                        help=('Same matrix as txt as well.'))
 
     parser.add_argument('--no-reorder', action='store_false',
                         help=('Reorder connectome plot.'))
