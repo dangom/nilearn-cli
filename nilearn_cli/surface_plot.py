@@ -17,9 +17,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+from matplotlib import cm
+from matplotlib.colors import Normalize, LinearSegmentedColormap
 
 from nilearn import datasets, image, plotting, surface
 from nilearn._utils.extmath import fast_abs_percentile
+from nilearn.plotting.cm import _cmap_d as nilearn_cmaps
 
 FSAVERAGE = datasets.fetch_surf_fsaverage()
 
@@ -68,7 +71,7 @@ def _rename_outfile(nifti):
 
 
 def plot_full_surf_stat_map(stat, title=None, ts=None, mask=None,
-                            inflate=False, outfile=None,
+                            inflate=False, outfile=None, add_colorbar=True,
                             vmax=None, **kwargs):
     """Use nilearn's plot_surf_stat_map to plot volume data in the surface.
     Plots a collage of both hemispheres and both medial and lateral views of
@@ -107,20 +110,20 @@ def plot_full_surf_stat_map(stat, title=None, ts=None, mask=None,
         leftsurf = FSAVERAGE.pial_left
         rightsurf = FSAVERAGE.pial_right
 
-    plotting.plot_surf_stat_map(rightsurf, texture_r,
+    plotting.plot_surf_stat_map(rightsurf, texture_r, colorbar=False,
                                 hemi='right', axes=ax_rl,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
-    plotting.plot_surf_stat_map(rightsurf, texture_r,
+    plotting.plot_surf_stat_map(rightsurf, texture_r,  colorbar=False,
                                 hemi='right', view='medial', axes=ax_rm,
                                 bg_map=FSAVERAGE.sulc_right,
                                 vmax=vmax, **kwargs)
 
-    plotting.plot_surf_stat_map(leftsurf, texture_l,
+    plotting.plot_surf_stat_map(leftsurf, texture_l,  colorbar=False,
                                 hemi='left', axes=ax_ll,
                                 bg_map=FSAVERAGE.sulc_left,
                                 vmax=vmax, **kwargs)
-    plotting.plot_surf_stat_map(leftsurf, texture_l,
+    plotting.plot_surf_stat_map(leftsurf, texture_l,  colorbar=False,
                                 hemi='left', view='medial', axes=ax_lm,
                                 bg_map=FSAVERAGE.sulc_left,
                                 vmax=vmax, **kwargs)
@@ -144,6 +147,36 @@ def plot_full_surf_stat_map(stat, title=None, ts=None, mask=None,
         ax5.axis('off')
         # Only necessary if ax5 is on top. (zorder larger than other axes)
         # ax5.patch.set_alpha(0.)
+
+    # Add colorbar
+    if add_colorbar:
+        if 'threshold' in kwargs:
+            if kwargs['threshold'] is not None:
+                threshold = kwargs['threshold']
+            else:
+                threshold = 0
+
+        vmin = -vmax  # when also displaying negative values, change to -vmax
+        if 'cmap' in kwargs:
+            cmap = nilearn_cmaps[kwargs['cmap']]
+        else:
+            cmap = nilearn_cmaps['cold_hot']
+
+        norm = Normalize(vmin=vmin, vmax=vmax)
+        cmaplist = [cmap(i) for i in range(cmap.N)]
+        # set colors to grey for absolute values < threshold
+        istart = int(norm(-threshold, clip=True) * (cmap.N - 1))
+        istop = int(norm(threshold, clip=True) * (cmap.N - 1))
+        for i in range(istart, istop):
+            cmaplist[i] = (0.5, 0.5, 0.5, 1.)
+        our_cmap = LinearSegmentedColormap.from_list('Custom cmap', cmaplist, cmap.N)
+        sm = plt.cm.ScalarMappable(cmap=our_cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+        # fake up the array of the scalar mappable.
+        sm._A = []
+        # fig.subplots_adjust(bottom=0.05)
+        cbar_ax = fig.add_subplot(32, 1, 32) # fig.add_axes([0.3, 0.9, 0.4, 0.03])
+        fig.colorbar(sm, cax=cbar_ax, orientation='horizontal')
+
 
     if title is not None:
         # y defaults to 0.98. The value of 0.93 lowers it a bit.
@@ -179,18 +212,25 @@ def main(args):
         outfile = args.outfile
 
     cmap = hcp_cmap() if args.deceive else 'cold_hot'
+    originaldir = op.dirname(args.infile)
 
     # TODO simplify if else to avoid duplication.
     if len(image.load_img(args.infile).shape) < 4:  # Handle 3D image
         img = image.load_img(args.infile)
+
+        if op.exists(op.join(originaldir, 'melodic_mix')):
+            tsfile = op.join(originaldir, 'melodic_mix')
+            ts = np.loadtxt(tsfile)
+        else:
+            ts = None
+
         plot_full_surf_stat_map(img, outfile=outfile, title=args.label,
-                                cmap=cmap,
+                                cmap=cmap, ts=ts,
                                 bg_on_data=args.bg_on_data, vmax=args.vmax,
                                 threshold=args.threshold,
                                 inflate=args.inflate, mask=args.mask)
 
     else:  # Handle 4D images.
-        originaldir = op.dirname(args.infile)
         tmpdir = tempfile.mkdtemp()
 
         if op.exists(op.join(originaldir, 'melodic_mix')):
@@ -233,6 +273,8 @@ def _cli_parser():
     parser.add_argument('--inflate', action='store_true',
                         help=('Instead of plotting on pial surface,'
                               'plot on inflated brain'))
+    parser.add_argument('--add-colorbar', action='store_true',
+                        help=('Add a colorbar to the plot'))
     parser.add_argument('--bg-on-data', action='store_true',
                         help=('Mix background image with statistical image'
                               'Modifies stats according to sulcus depth.'))

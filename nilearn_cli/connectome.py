@@ -202,6 +202,9 @@ def main(args):
         confounds = args.confounds
     elif args.fmriprepconfounds:
         confounds = args.infile[:args.infile.find('bold')+4] + '_confounds.tsv'
+        confounds = np.nan_to_num(np.genfromtxt(confounds,
+                                                missing_values=('n\a'),
+                                                skip_header=1))
     else:
         confounds = None
 
