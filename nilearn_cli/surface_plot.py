@@ -16,9 +16,9 @@ from sys import platform
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from matplotlib import cm
-from matplotlib.colors import Normalize, LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, Normalize
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
 from nilearn import datasets, image, plotting, surface
 from nilearn._utils.extmath import fast_abs_percentile
@@ -249,7 +249,8 @@ def main(args):
             pool = multiprocessing.Pool()
             pool.map(func, enumerate(images))
         else:
-            all(map(func, enumerate(images)))
+            for i in enumerate(images):
+                func(i)
 
         # Use ImageMagick's montage to create a mosaic of all individual plots.
         call(['montage', op.join(tmpdir, '*.png'), '-trim',
