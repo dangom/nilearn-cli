@@ -1,6 +1,6 @@
 [metadata]
 name = 'nilearn-cli'
-version = '0.0.1'
+version = '0.1.0'
 description = ''
 author = 'Daniel Gomez'
 author_email = 'd.gomez@donders.ru.nl'
